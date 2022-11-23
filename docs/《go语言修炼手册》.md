@@ -4734,35 +4734,688 @@ i: 1000
 
 
 
-
-
-
-
-
-
-
-
 ## 标准库
-
-### os
-
-### ioutil
-
-### bufio
 
 ### log
 
+golang内置了log包，实现了简单的日志服务。通过调用log包的函数，可以实现简单的日志打印功能。
+
+
+
+log包中有3个系列的日志打印函数，分别是print系列，panic系列和fatal系列。
+
+
+
+| 函数系列 | 作用                                                   |
+| -------- | ------------------------------------------------------ |
+| print    | 单纯打印日志                                           |
+| panic    | 打印日志，抛出panic异常                                |
+| fatal    | 打印日志，强制结束程序（os.Exit(1)）,defer函数不会执行 |
+
+
+
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+	"os"
+)
+
+func main() {
+
+	//配置日志的输出前缀
+	log.SetPrefix("Log:")
+
+	//配置日志
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Llongfile)
+
+	//设置日志输出到文件
+	f, _ := os.OpenFile("a.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, os.ModePerm)
+	defer f.Close()
+	log.SetOutput(f)
+
+	//简单打印日志
+	log.Print("hello golang...")
+	defer fmt.Print("程序结束...")
+	//panic日志
+	// log.Panic("bye...") //defer会被执行
+
+	//fatal日志
+	// log.Fatal("致命错误...") //defer不会被执行
+
+	//自定义logger
+	my_logger := log.New(os.Stdout, "My Log:", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	my_logger.Print("这个是自己定义的logger，一次性配置所有，会方便许多!")
+
+}
+
+```
+
+**运行结果**
+
+```
+My Log:2022/11/05 17:27:35.150644 /home/lll/Desktop/go/lll08_标准库/os/lll07_日志相关的操作.go:33: 这个是自己定义的logger，一次性配置所有，会方便许多!
+```
+
+
+
 ### builtin
+
+这个包提供了一些类型声明，变量和常量声明，还有一些便利的函数，这个包不需要导入，这些变量和函数就可以直接使用。
+
+
+
+#### panic
+
+抛出一个panic异常。
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+
+	//panic 抛出异常
+	panic("抛出异常!!!")
+	
+}
+
+```
+
+
+
+#### new和make
+
+new和make的区别：
+
+1. make只能用来分配及初始化类型为slice，map和chan的数据；new可以分配任意类型的数据
+2. new分配返回的是指针，即类型为*T；make返回的是数据的值，即T
+3. make分配后会对数据进行初始化，而new不会
+
+
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+
+
+	s := new(string)
+	fmt.Printf("s: %T\n", s) //*string
+	fmt.Printf("s: %v\n", *s)
+
+	i2 := new([]int)
+	fmt.Printf("i2: %T\n", i2) //*[]int
+	fmt.Printf("i2: %v\n", *i2)
+
+	i3 := make([]int, 10, 100) //初始化容量为100，长度为10
+	fmt.Printf("i3: %T\n", i3)
+	fmt.Printf("i3: %v\n", i3)
+
+}
+
+```
+
+**运行结果**
+
+```
+s: *string
+s: 
+i2: *[]int
+i2: []
+i3: []int
+i3: [0 0 0 0 0 0 0 0 0 0]
+```
+
+> 内建函数make(T,args)与new(T)的用途不一样。它只用来创建slice，map和chan，并且返回一个初始化后的类型为T的数据。之所以不同，是因为这三个类型的背后引用了使用前必须初始化的数据结构。例如：slice是一个三元描述符，包含一个指向数据的指针，长度，以及容量，在这些项被初始化之前，slice都是nil。对于slice，map和chan，make初始化这些内部数据结构，并准备好可用的值。
+
+
 
 ### bytes
 
+bytes提供了对字节切片进行读写操作的一系列函数，字节切片处理函数比较多分为基本处理函数，比较函数，后缀检查函数，索引函数，分割函数，大小写处理函数和子切片处理函数。
+
+
+
+```go
+package main
+
+import (
+	"bytes"
+	"fmt"
+)
+
+func main() {
+
+	s1 := "hello world!"
+	b1 := []byte("你好，世界！")
+	fmt.Printf("s1: %v\n", s1)
+	fmt.Printf("b1: %v\n", b1)
+
+	//bytes和string的相互转换
+	//1.bytes转string
+	fmt.Printf("string(b1): %v\n", string(b1))
+	//2.string转bytes
+	fmt.Printf("[]byte(s1): %v\n", []byte(s1))
+
+	//contains：检查bytes中是否包含子bytes
+	fmt.Printf("bytes.Contains(b1, []byte(\"世界\")): %v\n", bytes.Contains(b1, []byte("世界")))
+
+	//count：统计某个bytes出现的次数
+	fmt.Printf("bytes.Count([]byte(s1), []byte(\"l\")): %v\n", bytes.Count([]byte(s1), []byte("l")))
+
+	//compare:比较两个bytes The result will be 0 if a == b, -1 if a < b, and +1 if a > b.
+	fmt.Printf("bytes.Compare(b1, []byte(\"hello\")): %v\n", bytes.Compare(b1, []byte("hello")))
+
+	//分割bytes
+	before, after, _ := bytes.Cut(b1, []byte("，"))
+	fmt.Printf("before: %v\n", string(before))
+	fmt.Printf("after: %v\n", string(after))
+
+	//连接bytes
+	b := bytes.Join([][]byte{b1, []byte(s1)}, []byte("==="))
+	fmt.Printf("b: %v\n", string(b))
+
+	//runes 转成utf8编码 这样能够正确计算中文长度
+	r := bytes.Runes(b1)
+	fmt.Printf("bytes.Runes(b1): %v\n", r)
+	fmt.Printf("len(r): %v\n", len(r))
+
+}
+
+```
+
+**运行结果**
+
+```
+s1: hello world!
+
+b1: [228 189 160 229 165 189 239 188 140 228 184 150 231 149 140 239 188 129]
+
+string(b1): 你好，世界！
+
+[]byte(s1): [104 101 108 108 111 32 119 111 114 108 100 33]
+
+bytes.Contains(b1, []byte("世界")): true
+
+bytes.Count([]byte(s1), []byte("l")): 3
+
+bytes.Compare(b1, []byte("hello")): 1
+
+before: 你好
+
+after: 世界！
+
+b: 你好，世界！===hello world!
+
+bytes.Runes(b1): [20320 22909 65292 19990 30028 65281]
+
+len(r): 6
+```
+
+
+
 ### errors
+
+errors包实现了操作错误的函数。go语言使用error类型来返回函数执行过程中遇到的错误，如果返回的error值为nil，则表示未遇到错误，否则error会返回一个字符串，用于说明遇到了什么错误。
+
+
+
+error的结构
+
+```go
+type error interface {
+    Error() string
+}
+```
+
+**你可以使用任何类型去实现它（只要添加一个Error()方法即可）**，也就是说，error可以是任何类型，这意味着，函数返回的error值实际可以包含任意信息，不一定是字符串。
+
+error不一定表示一个错误，它可以表示任何信息，比如io包中就用error类型的io.EOF表示数据读取结束，而不是遇到了什么错误。
+
+errors包实现了一个最简单的error类型，只包含了一个字符串，它可以记录大多数情况下遇到的错误信息。errors包的用法很简单，只有一个New函数，用于生成一个简单的error对象：
+
+```go
+func New(text string) error
+```
+
+
+
+```go
+package main
+
+import (
+	"errors"
+	"fmt"
+	"time"
+)
+
+//自定义errors
+type MyError struct {
+	When time.Time
+	What string
+}
+
+/*
+type error interface {
+	Error() string
+}
+
+
+error是一个接口，只要实现了Error方法，就可以是一个error
+
+*/
+
+func (e MyError) Error() string {
+	return fmt.Sprintf("%v : %v", e.When, e.What)
+}
+
+//检测字符串是否为空
+func check_str(s string) (err error) {
+
+	if s == "" {
+		err = errors.New("字符串不能为空...")
+	} else {
+		err = MyError{
+			When: time.Date(2022, 11, 11, 11, 11, 11, 11, time.UTC),
+			What: fmt.Sprintf("%v 不是一个空字符串...", s),
+		}
+	}
+	return
+
+}
+func main() {
+
+	s := ""
+	err := check_str(s)
+	fmt.Printf("err: %v\n", err)
+	s2 := "hello python"
+	err2 := check_str(s2)
+	fmt.Printf("err2: %v\n", err2)
+
+}
+
+```
+
+**运行结果**
+
+```
+err: 字符串不能为空...
+err2: 2022-11-11 11:11:11.000000011 +0000 UTC : hello python 不是一个空字符串...
+```
+
+
 
 ### sort
 
+sort包提供了排序切片和用户自定义数据集以及相关功能的函数。
+
+sort包主要针对[]int，[]float64，[]string以及其他自定义的切片排序，对于任何类型的切片，只要实现了**Len**，**Less**和**Swap**接口就可以对其进行排序。
+
+sort.Sort默认使用快速排序方法，因此平均时间复杂度为nlog(n)
+
+```go
+// Sort sorts data in ascending order as determined by the Less method.
+// It makes one call to data.Len to determine n and O(n*log(n)) calls to
+// data.Less and data.Swap. The sort is not guaranteed to be stable.
+func Sort(data Interface) {
+	n := data.Len()
+	quickSort(data, 0, n, maxDepth(n))
+}
+```
+
+
+
+ ```go
+package main
+
+import (
+	"fmt"
+	"sort"
+)
+
+type Person struct {
+	name   string
+	age    int
+	weight float64
+}
+
+type PersonSlice []Person
+
+//实现Len方法，返回切片的长度
+func (ps PersonSlice) Len() int {
+	return len(ps)
+}
+
+//实现Less方法，定义比较规则
+func (ps PersonSlice) Less(i int, j int) bool {
+	return ps[i].age < ps[j].age //按照年龄进行比较
+}
+
+//实现Swap方法，定义交换规则
+func (ps PersonSlice) Swap(i int, j int) {
+	ps[i], ps[j] = ps[j], ps[i]
+}
+
+func main() {
+
+	//对int切片进行排序 []float64和[]string的使用方法同此
+	var a []int
+	a = []int{5, 1, 3, 2, 4}
+	fmt.Printf("排序前:a: %v\n", a)
+	sort.Ints(a)
+	fmt.Printf("排序后:a: %v\n", a)
+	fmt.Printf("sort.IntsAreSorted(a): %v\n", sort.IntsAreSorted(a)) //判断[]int序列是不是增序序列
+	fmt.Printf("sort.SearchInts(a, 3): %v\n", sort.SearchInts(a, 3)) //查找某一个元素的位置 默认是二分法进行查找
+
+	//对自定义数据类型的切片进行排序
+	tom := Person{name: "Tom", age: 18, weight: 66.7}
+	jerry := Person{name: "Jerry", age: 16, weight: 56.7}
+	jack := Person{name: "Jack", age: 19, weight: 78.1}
+	hank := Person{name: "Hank", age: 18, weight: 61.7}
+	marry := Person{name: "Marry", age: 20, weight: 55.7}
+	var ps PersonSlice
+	ps = append(ps, tom, jerry, jack, hank, marry)
+	fmt.Printf("排序前ps: %v\n", ps)
+
+	sort.Sort(ps)
+	fmt.Printf("排序后ps: %v\n", ps) //按年龄是增序序列
+
+}
+
+ ```
+
+**运行结果**
+
+```
+排序前:a: [5 1 3 2 4]
+排序后:a: [1 2 3 4 5]
+sort.IntsAreSorted(a): true
+sort.SearchInts(a, 3): 2
+排序前ps: [{Tom 18 66.7} {Jerry 16 56.7} {Jack 19 78.1} {Hank 18 61.7} {Marry 20 55.7}]
+排序后ps: [{Jerry 16 56.7} {Tom 18 66.7} {Hank 18 61.7} {Jack 19 78.1} {Marry 20 55.7}]
+```
+
+
+
 ### time
 
+Package time provides functionality for measuring and displaying time.（用于时间的测量和显示）
+
+
+
+#### 基本使用
+
+```go
+//获取当前时间
+	now := time.Now()
+	fmt.Printf("now: %v\n", now)
+	year := now.Year()          //年
+	month := now.Month()        //月
+	day := now.Day()            //日
+	hour := now.Hour()          //时
+	minute := now.Minute()      //分
+	second := now.Second()      //秒
+	nsecond := now.Nanosecond() //纳秒
+	fmt.Printf("%v-%v-%v:%v:%v:%v:%v\n", year, month, day, hour, minute, second, nsecond)
+```
+
+**运行结果**
+
+```
+now: 2022-11-14 21:53:00.435701792 +0800 CST m=+0.000115447
+2022-November-14:21:53:0:435701792
+```
+
+
+
+#### 时间戳
+
+时间戳是自1970年1月1日（08:00:00GMT）至当前时间的总秒数。它也被称为Unix时间戳。
+
+```go
+//时间戳
+fmt.Printf("now.Unix(): %v\n", now.Unix())           //秒数
+fmt.Printf("now.UnixMicro(): %v\n", now.UnixMicro()) //毫秒
+fmt.Printf("now.UnixNano(): %v\n", now.UnixNano())   //纳秒
+
+//时间戳转成时间
+fmt.Printf("time.Unix(now.Unix(), 0): %v\n", time.Unix(now.Unix(), 0))
+```
+
+**运行结果**
+
+```
+now.Unix(): 1668434792
+now.UnixMicro(): 1668434792741556
+now.UnixNano(): 1668434792741556203
+time.Unix(now.Unix(), 0): 2022-11-14 22:06:32 +0800 CST
+```
+
+
+
+#### 时间的"运算"
+
+```go
+//时间的运算
+	today := now
+	tomorrow := today.Add(time.Hour * 24) //在当前时间上增加24小时
+	fmt.Printf("today: %v\n", today)
+	fmt.Printf("tomorrow: %v\n", tomorrow)
+
+	dif := today.Sub(tomorrow) //今天与昨天相差的时间
+	fmt.Printf("dif: %v\n", dif)
+
+	//比较两个时间是否相同
+	fmt.Printf("today.Equal(tomorrow): %v\n", today.Equal(tomorrow))
+
+	//判断当前时间是否在目标时间之前
+	fmt.Printf("today.Before(tomorrow): %v\n", today.Before(tomorrow))
+
+	//判断当前时间是否在目标时间之后
+	fmt.Printf("today.After(tomorrow): %v\n", today.After(tomorrow))
+```
+
+**运行结果**
+
+```
+today: 2022-11-14 22:16:35.620284622 +0800 CST m=+0.000048094
+tomorrow: 2022-11-15 22:16:35.620284622 +0800 CST m=+86400.000048094
+dif: -24h0m0s
+today.Equal(tomorrow): false
+today.Before(tomorrow): true
+today.After(tomorrow): false
+```
+
+
+
+#### Ticker和Timer
+
+```go
+//定时器Ticker
+	c := time.Tick(time.Second) //设置一个间隔一秒的定时器
+	for i := range c {
+		fmt.Printf("now: %v\n", i)             //每隔一秒打印一下当前时间
+		if i.After(now.Add(time.Second * 3)) { //3秒后停止
+			break
+		}
+	}
+
+	//Timer
+	t := time.NewTimer(time.Second * 2)
+	fmt.Printf("now2: %v\n", time.Now())
+	<-t.C
+	fmt.Printf("now2 after 2 seconds: %v\n", time.Now()) //两秒后执行到这里
+```
+
+**运行结果**
+
+```
+now: 2022-11-14 22:34:08.697290905 +0800 CST m=+1.000982288
+now: 2022-11-14 22:34:09.697399128 +0800 CST m=+2.001090512
+now: 2022-11-14 22:34:10.697623176 +0800 CST m=+3.001314560
+now2: 2022-11-14 22:34:10.697739262 +0800 CST m=+3.001430647
+now2 after 2 seconds: 2022-11-14 22:34:12.698702444 +0800 CST m=+5.002393830
+```
+
+
+
+#### 时间格式化
+
+时间类型有一个自带的Format方法，需要注意的是Go语言中格式化的模板不是常见的Y-m-d H:M:S，而是使用Go的诞生时间2006年1月2号15点04分（记忆口诀为：2006 1 2 3 4）。
+
+
+
+```go
+//时间格式化
+fmt.Printf("now.Format(\"2006-01-02 15:04:05.000 Mon Jan\"): %v\n", now.Format("2006/01/02 15:04:05.000 Mon Jan")) //24小时制
+fmt.Printf("now.Format(\"Mon Jan 2006-01-02 3:4:4 PM\"): %v\n", now.Format("Mon Jan 2006-01-02 3:4:4.000 PM"))     //12小时制
+```
+
+**运行结果**
+
+```
+now.Format("2006-01-02 15:04:05.000 Mon Jan"): 2022/11/14 22:44:56.882 Mon Nov
+now.Format("Mon Jan 2006-01-02 3:4:4 PM"): Mon Nov 2022-11-14 10:44:44.882 PM
+```
+
+
+
+#### 解析字符串格式的时间
+
+```go
+//解析字符串格式的时间
+loc, _ := time.LoadLocation("Asia/Shanghai")
+
+//第一个参数指定格式，第二参数为字符串格式的时间，第三个参数指定时区
+t2, _ := time.ParseInLocation("2006/01/02 15:04:05.000 Mon Jan", "2022/11/11 22:44:56.882 Mon Nov", loc)
+fmt.Printf("t2: %T\n", t2)
+fmt.Printf("t2: %v\n", t2)
+```
+
+**运行结果**
+
+```
+t2: time.Time
+t2: 2022-11-11 22:44:56.882 +0800 CST
+```
+
+
 ### json
+
+这个包可以实现json的编码和解码，即实现json对象和struct之间相互转换。
+
+
+
+**核心的两个函数**
+
+```go
+func Marshal(v interface{}) ([]byte ,error)  //将go语言中的struct编码成json,返回json字符串的字节切片和错误信息
+```
+
+```go
+func Unmarshal(data []byte, v interface{}) error //将json解码成go语言中的struct，返回错误信息
+```
+
+
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+)
+
+type Person1 struct {
+	Name   string
+	Age    int
+	PetDog Dog
+}
+
+type Dog struct {
+	Name string
+	Age  int
+}
+
+func main() {
+
+	erha := Dog{Name: "二哈", Age: 3}
+	tom := Person1{Name: "Tom", Age: 18, PetDog: erha}
+	fmt.Printf("tom: %v\n", tom)
+
+	//1.将一个struct实例转换成一个json对象
+	//Marshal接收一个任何类型的对象，然后会返回对应json字符串的字节切片
+	b, _ := json.Marshal(tom)
+	json_b := string(b)
+	fmt.Printf("b: %v\n", b)
+	fmt.Printf("json_b: %v\n", json_b)
+
+	//2.将一个json字符串转成一个struct Unmarshal接收一个json字符串的字节切片和一个任意struct对象的地址
+	//Unmarshal会将json字符串对象的值相应的赋给这个struct对象
+	var tom2 Person1
+	json.Unmarshal([]byte(json_b), &tom2)
+	fmt.Printf("tom2: %v\n", tom2)
+
+	//3.从io流中获取json字符串，然后转成struct
+	f, _ := os.Open("demo.json")
+	defer f.Close()
+	json_decoder := json.NewDecoder(f)
+	var tom3 map[string]interface{}
+	json_decoder.Decode(&tom3)
+	for k, v := range tom3 {
+		fmt.Printf("k:%v,v:%v\n", k, v)
+	}
+
+	//4.将struct实例转成json后写入文件
+	jerry := Person1{Name: "Jerry", Age: 16, PetDog: erha}
+	f2, _ := os.OpenFile("demo2.json", os.O_RDWR|os.O_CREATE, 0777)
+	defer f2.Close()
+	json_encoder := json.NewEncoder(f2)
+	json_encoder.Encode(jerry)
+
+	//从json文件中读取写入的内容
+	res := make([]byte, 100)
+	f3, _ := os.Open("demo2.json")
+	f3.Read(res)
+	defer f3.Close()
+    fmt.Printf("res: %v\n", res)
+
+
+}
+
+```
+
+**运行结果**
+
+```
+tom: {Tom 18 {二哈 3}}
+b: [123 34 78 97 109 101 34 58 34 84 111 109 34 44 34 65 103 101 34 58 49 56 44 34 80 101 116 68 111 103 34 58 123 34 78 97 109 101 34 58 34 228 186 140 229 147 136 34 44 34 65 103 101 34 58 51 125 125]
+json_b: {"Name":"Tom","Age":18,"PetDog":{"Name":"二哈","Age":3}}
+tom2: {Tom 18 {二哈 3}}
+k:PetDog,v:map[Age:3 Name:二哈]
+k:Name,v:Tom
+k:Age,v:18
+res: {"Name":"Jerry","Age":16,"PetDog":{"Name":"二哈","Age":3}}
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### xml
 
