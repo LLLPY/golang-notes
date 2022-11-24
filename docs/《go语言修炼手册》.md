@@ -5407,17 +5407,70 @@ res: {"Name":"Jerry","Age":16,"PetDog":{"Name":"二哈","Age":3}}
 
 
 
-
-
-
-
-
-
-
-
-
-
 ### xml
+
+和对json的编码和解码类似，golang也提供了对xml的编码和解码，并且用法极其相似。
+
+```go
+package main
+
+import (
+	"encoding/xml"
+	"fmt"
+)
+
+type Person2 struct {
+	XMLName xml.Name `xml:"Person"` //xml中的根元素
+	Name    string   `xml:"name"`
+	Age     int      `xml:"age"`
+	Email   string   `xml:"email"`
+}
+
+func main() {
+
+	p := Person2{
+		Name:  "Tom",
+		Age:   18,
+		Email: "Tom@110.com",
+	}
+	//1.将一个struct实例转成一个xml
+	// xml.Marshal(&p) //这个是没有缩进的
+	b, _ := xml.MarshalIndent(&p, "", " ")
+	fmt.Printf("%v\n", string(b))
+
+	//2.将一个xml转成一个struct
+	var p2 Person2
+	xml.Unmarshal(b, &p2)
+	fmt.Printf("p2: %v\n", p2)
+
+}
+
+```
+
+**运行结果**
+
+```
+<Person>
+ <name>Tom</name>
+ <age>18</age>
+ <email>Tom@110.com</email>
+</Person>
+p2: {{ Person} Tom 18 Tom@110.com}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### math
 
